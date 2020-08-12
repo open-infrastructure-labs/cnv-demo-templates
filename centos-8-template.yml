@@ -1,0 +1,94 @@
+apiVersion: template.openshift.io/v1
+kind: Template
+metadata:
+  annotations:
+    name.os.template.kubevirt.io/centos8.0: CentOS 8.0
+    validations: |
+      [
+        {
+          "name": "minimal-required-memory",
+          "path": "jsonpath::.spec.domain.resources.requests.memory",
+          "rule": "integer",
+          "message": "This VM requires more memory.",
+          "min": 1073741824
+        }
+      ]
+  labels:
+    flavor.template.kubevirt.io/medium: "true"
+    os.template.kubevirt.io/centos8.0: "true"
+    template.kubevirt.io/type: vm
+    vm.kubevirt.io/template: centos8-server-medium-v0.7.0
+    vm.kubevirt.io/template.namespace: openshift
+    workload.template.kubevirt.io/server: "true"
+  name: centos-8-template
+  namespace: default
+objects:
+  - apiVersion: kubevirt.io/v1alpha3
+    kind: VirtualMachine
+    metadata:
+      name: ${NAME}
+    spec:
+      dataVolumeTemplates:
+        - apiVersion: cdi.kubevirt.io/v1alpha1
+          kind: DataVolume
+          metadata:
+            name: ${NAME}-disk0
+          spec:
+            pvc:
+              accessModes:
+                - ReadWriteOnce
+              resources:
+                requests:
+                  storage: 10Gi
+              storageClassName: hostpath-provisioner
+              volumeMode: Filesystem
+            source:
+              pvc:
+                name: centos-8-stream
+                namespace: default
+      running: false
+      template:
+        metadata:
+          labels:
+            kubevirt.io/domain: ${NAME}
+            kubevirt.io/size: medium
+        spec:
+          domain:
+            cpu:
+              cores: 1
+              sockets: 1
+              threads: 1
+            devices:
+              disks:
+                - bootOrder: 1
+                  disk:
+                    bus: virtio
+                  name: disk0
+                - disk:
+                    bus: virtio
+                  name: cloudinitdisk
+              networkInterfaceMultiqueue: true
+              rng: {}
+            machine:
+              type: pc-q35-rhel8.1.0
+            resources:
+              requests:
+                memory: 4Gi
+          evictionStrategy: LiveMigrate
+          hostname: ${NAME}
+          terminationGracePeriodSeconds: 0
+          volumes:
+            - dataVolume:
+                name: ${NAME}-disk0
+              name: disk0
+            - cloudInitNoCloud:
+                userData: |
+                  #cloud-config
+                  name: default
+                  ssh_authorized_keys:
+                    - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDHU+dRblINH9VOKWKluyyE1xz0GG6YMIiTCgUlDrEzvybC0Y0luIj87rQFHmihYFrmYdrCe2v2dFo1LggJEMPh3jfrXzJVl7KjbTOdsUSVwWCHD07uAiyNmH7aNGFuS4B6oiQj5NSTzl5C0Mvt/JIZmkky2305tZoF40bGlHP/U3tXoU+QPRqV44HR0AdkMArHADQoR/cpEQJantNuQsV2BouzfOJ8GcFLDU2ZPESgubrd4CxQ7p2+uujl0WsTsz0Ip3FkJINBHBnOGM9NteHVsiGJgmg3oeOhcH31bjYOToRNKvjAiepAsQMjhfm3GE850DcFJO6kEGD8umbhRiXZIfGJkqw1HWzcaN09q9cOWczMUytGBy6BGc7eNdf03F9FHLOO8c5gcA6Sd7rJFZD6LbRv+O8mtbLpL9Bi41I/5vNgNo0HI0Z2w56r9F8rRQ+jy4HR29hvV5yR7LZHC2kJ3TZiZBeqy5UG6SlQI4fOq1JHQ9/IzT4wV+sxQz38k3Yir6RE/Yg9N8wTMxpYG5/LsXa/eGRThCRbbaY5IgSK4NAWDDhMEt9TqTwrNSzEMi6Xv5DLROtyctUNN5fcN2M+evcJ4GqUgaw87e6Jk89cyQj/f3XLRjO2Yxudl5uLDd4f5aOnMJxsr8+3j5xMe8BNM9VkZqhPM/FEhi40xAl9lQ==
+              name: cloudinitdisk
+parameters:
+  - description: Name for the new VM
+    name: NAME
+    required: true
