@@ -1,0 +1,115 @@
+#! This is a ytt [1] template.
+#!
+#! [1]: https://get-ytt.io/
+
+#@ load("@ytt:data", "data")
+#@ load("@ytt:yaml", "yaml")
+
+#@ def cloud_init_data():
+name: default
+#@ if/end data.values.ssh_key:
+ssh_authorized_keys:
+  - #@ data.values.ssh_key
+#@ end
+
+#@ def to_yaml(data):
+#@   return yaml.encode(data)
+#@ end
+---
+apiVersion: template.openshift.io/v1
+kind: Template
+metadata:
+  annotations:
+    name.os.template.kubevirt.io/centos8.0: CentOS 8.0
+    validations: |
+      [
+        {
+          "name": "minimal-required-memory",
+          "path": "jsonpath::.spec.domain.resources.requests.memory",
+          "rule": "integer",
+          "message": "This VM requires more memory.",
+          "min": 1073741824
+        }
+      ]
+  labels:
+    #@yaml/text-templated-strings
+    flavor.template.kubevirt.io/(@= data.values.flavor @): "true"
+    os.template.kubevirt.io/centos8.0: "true"
+    template.kubevirt.io/type: vm
+    vm.kubevirt.io/template: #@ "centos8-server-{}-v0.7.0".format(data.values.flavor)
+    vm.kubevirt.io/template.namespace: openshift
+    workload.template.kubevirt.io/server: "true"
+  name: centos-8-template
+  namespace: #@ data.values.namespace
+objects:
+  - apiVersion: kubevirt.io/v1alpha3
+    kind: VirtualMachine
+    metadata:
+      name: ${NAME}
+    spec:
+      dataVolumeTemplates:
+        - apiVersion: cdi.kubevirt.io/v1alpha1
+          kind: DataVolume
+          metadata:
+            name: ${NAME}-disk0
+          spec:
+            pvc:
+              accessModes:
+                - ReadWriteOnce
+              resources:
+                requests:
+                  storage: #@ data.values.disk_size
+              storageClassName: hostpath-provisioner
+              volumeMode: Filesystem
+            source:
+              http:
+                url: #@ data.values.image_url
+      running: false
+      template:
+        metadata:
+          labels:
+            kubevirt.io/domain: ${NAME}
+            kubevirt.io/size: #@ data.values.flavor
+        spec:
+          domain:
+            cpu:
+              cores: 1
+              sockets: 1
+              threads: 1
+            devices:
+              disks:
+                - bootOrder: 1
+                  disk:
+                    bus: virtio
+                  name: disk0
+                - disk:
+                    bus: virtio
+                  name: cloudinitdisk
+              interfaces:
+              - masquerade: {}
+                model: virtio
+                name: nic-0
+              networkInterfaceMultiqueue: true
+              rng: {}
+            machine:
+              type: pc-q35-rhel8.1.0
+            resources:
+              requests:
+                memory: 4Gi
+          evictionStrategy: LiveMigrate
+          hostname: ${NAME}
+          networks:
+          - name: nic-0
+            pod: {}
+          terminationGracePeriodSeconds: 0
+          volumes:
+            - dataVolume:
+                name: ${NAME}-disk0
+              name: disk0
+            - cloudInitNoCloud:
+                userData: #@ to_yaml(cloud_init_data())
+              name: cloudinitdisk
+parameters:
+  - description: Name for the new VM
+    name: NAME
+    required: true
