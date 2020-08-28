@@ -1,0 +1,80 @@
+# This playbook requires `mc` the minio client (not to be confused
+# with `mc` the terminal file manager.
+---
+- hosts: localhost
+  gather_facts: false
+
+  vars_files:
+    - images.yml
+
+  vars:
+    mc_alias: moc
+
+  tasks:
+    # This should also trigger failure if `mc` is not the
+    # `mc` we expect.
+    - name: ensure the mc configuration is correct
+      command: >-
+        mc --quiet alias ls {{ mc_alias }}
+      changed_when: false
+
+    - name: ensure cache directory exists
+      file:
+        path: ./cache
+        state: directory
+
+    - name: check if target image exists
+      command: >-
+        mc stat {{ mc_alias }}/images/{{ item.name }}
+      loop: "{{ images }}"
+      register: image_check
+      failed_when: false
+      changed_when: image_check.rc != 0
+
+    - name: check if we have a new source_url
+      command: >-
+        mc tag list "{{ mc_alias }}/images/{{ image.name }}" --json
+      register: url_check
+      failed_when: false
+      changed_when: >-
+        (url_check.stdout|from_json).tagset is not defined or
+        (url_check.stdout|from_json).tagset.source_url != image.url
+      when: item is not changed
+      vars:
+        image: "{{ item.item }}"
+      loop: "{{ image_check.results }}"
+      loop_control:
+        label: "{{ image }}"
+
+    - name: download image to local cache
+      get_url:
+        url: "{{ image.url }}"
+        dest: "./cache/{{ image.url|hash('sha256') }}"
+      vars:
+        image: "{{ item.0.item }}"
+      when: item.0 is changed or item.1 is changed
+      loop: "{{ image_check.results|zip(url_check.results)|list }}"
+      loop_control:
+        label: "{{ image }}"
+
+    - name: upload image to registry
+      command: >-
+        mc cp ./cache/{{ image.url|hash('sha256') }}
+        {{ mc_alias }}/images/{{ image.name }}
+      vars:
+        image: "{{ item.0.item }}"
+      when: item.0 is changed or item.1 is changed
+      loop: "{{ image_check.results|zip(url_check.results)|list }}"
+      loop_control:
+        label: "{{ image }}"
+
+    - name: set image tags
+      tags: [tag]
+      command: >-
+        mc tag set moc/images/{{ image.name }} "source_url={{ image.url }}"
+      vars:
+        image: "{{ item.0.item }}"
+      when: item.0 is changed or item.1 is changed
+      loop: "{{ image_check.results|zip(url_check.results)|list }}"
+      loop_control:
+        label: "{{ image }}"

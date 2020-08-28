@@ -1,0 +1,16 @@
+---
+images:
+  - name: centos-7-x86_64
+    url: https://cloud.centos.org/centos/7/images/CentOS-7-x86_64-GenericCloud-2003.qcow2
+
+  - name: centos-8-x86_64
+    url: https://cloud.centos.org/centos/8/x86_64/images/CentOS-8-GenericCloud-8.2.2004-20200611.2.x86_64.qcow2
+
+  - name: fedora-32-x86_64
+    url: https://download.fedoraproject.org/pub/fedora/linux/releases/32/Cloud/x86_64/images/Fedora-Cloud-Base-32-1.6.x86_64.qcow2
+
+  - name: cirros
+    url: http://download.cirros-cloud.net/0.5.1/cirros-0.5.1-x86_64-disk.img
+
+  - name: ubuntu-focal-20.04-amd64
+    url: https://cloud-images.ubuntu.com/focal/20200825/focal-server-cloudimg-amd64.img
