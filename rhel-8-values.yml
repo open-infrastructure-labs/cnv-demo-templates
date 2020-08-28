@@ -1,0 +1,7 @@
+#@data/values
+---
+name: rhel-8
+image_url: http://172.30.109.145:9000/images/rhel-8.2-x86_64
+os_short_name: rhel8.2
+os_long_name: Red Hat Enterprise Linux 8.0 or higher
+vm_template: rhel8-server-{}-v0.10.0

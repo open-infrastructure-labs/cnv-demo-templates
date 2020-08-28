@@ -1,0 +1,7 @@
+#@data/values
+---
+name: fedora-32
+image_url: http://172.30.109.145:9000/images/fedora-32-x86_64
+os_short_name: silverblue32
+os_long_name: Fedora 31 or higher
+vm_template: fedora-server-{}-v0.7.0

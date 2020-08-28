@@ -3,24 +3,14 @@
 #! [1]: https://get-ytt.io/
 
 #@ load("@ytt:data", "data")
-#@ load("@ytt:yaml", "yaml")
-
-#@ def cloud_init_data():
-name: default
-#@ if/end data.values.ssh_key:
-ssh_authorized_keys:
-  - #@ data.values.ssh_key
-#@ end
-
-#@ def to_yaml(data):
-#@   return yaml.encode(data)
-#@ end
 ---
 apiVersion: template.openshift.io/v1
 kind: Template
 metadata:
   annotations:
-    name.os.template.kubevirt.io/centos8.0: CentOS 8.0
+    #@yaml/text-templated-strings
+    name.os.template.kubevirt.io/(@= data.values.os_short_name @): (@= data.values.os_long_name @)
+    #@yaml/text-templated-strings
     validations: |
       [
         {
@@ -28,19 +18,19 @@ metadata:
           "path": "jsonpath::.spec.domain.resources.requests.memory",
           "rule": "integer",
           "message": "This VM requires more memory.",
-          "min": 1073741824
+          "min": (@= str(data.values.min_memory) @)
         }
       ]
   labels:
     #@yaml/text-templated-strings
     flavor.template.kubevirt.io/(@= data.values.flavor @): "true"
-    os.template.kubevirt.io/centos8.0: "true"
+    #@yaml/text-templated-strings
+    os.template.kubevirt.io/(@= data.values.os_short_name @): "true"
     template.kubevirt.io/type: vm
-    vm.kubevirt.io/template: #@ "centos8-server-{}-v0.7.0".format(data.values.flavor)
+    vm.kubevirt.io/template: #@ data.values.vm_template.format(data.values.flavor)
     vm.kubevirt.io/template.namespace: openshift
     workload.template.kubevirt.io/server: "true"
-  name: centos-8-template
-  namespace: #@ data.values.namespace
+  name: #@ data.values.name
 objects:
   - apiVersion: kubevirt.io/v1alpha3
     kind: VirtualMachine
@@ -92,7 +82,7 @@ objects:
               networkInterfaceMultiqueue: true
               rng: {}
             machine:
-              type: pc-q35-rhel8.1.0
+              type: #@ data.values.machine_type
             resources:
               requests:
                 memory: 4Gi
@@ -107,7 +97,13 @@ objects:
                 name: ${NAME}-disk0
               name: disk0
             - cloudInitNoCloud:
-                userData: #@ to_yaml(cloud_init_data())
+                #@yaml/text-templated-strings
+                userData: |
+                  #cloud-config
+                  name: default
+                  ssh_authorized_keys:
+                    - |
+                      (@= data.values.ssh_key @)
               name: cloudinitdisk
 parameters:
   - description: Name for the new VM

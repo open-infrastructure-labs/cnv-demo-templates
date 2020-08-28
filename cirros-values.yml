@@ -1,0 +1,6 @@
+#@data/values
+---
+name: cirros
+flavor: tiny
+disk_size: 1Gi
+image_url: http://download.cirros-cloud.net/0.5.1/cirros-0.5.1-x86_64-disk.img

@@ -1,0 +1,12 @@
+#@data/values
+---
+disk_size: 10Gi
+flavor: medium
+machine_type: pc-q35-rhel8.2.0
+ssh_key:
+os_short_name: rhel8.2
+os_long_name: Red Hat Enterprise Linux 8.0 or higher
+name:
+image_url:
+vm_template: rhel8-server-{}-v0.10.0
+min_memory: 1073741824

@@ -1,0 +1,4 @@
+#@data/values
+---
+name: ubuntu-focal-20.04
+image_url: http://172.30.109.145:9000/images/ubuntu-focal-20.04-amd64
