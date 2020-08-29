@@ -30,7 +30,7 @@ metadata:
     vm.kubevirt.io/template: #@ data.values.vm_template.format(data.values.flavor)
     vm.kubevirt.io/template.namespace: openshift
     workload.template.kubevirt.io/server: "true"
-  name: #@ data.values.name
+  name: #@ "{}-{}".format(data.values.name, data.values.network_mode)
 objects:
   - apiVersion: kubevirt.io/v1alpha3
     kind: VirtualMachine
@@ -76,9 +76,15 @@ objects:
                     bus: virtio
                   name: cloudinitdisk
               interfaces:
-              - masquerade: {}
-                model: virtio
-                name: nic-0
+                #@ if data.values.network_mode == "bridge":
+                - bridge: {}
+                  model: virtio
+                  name: nic-0
+                #@ else:
+                - masquerade: {}
+                  model: virtio
+                  name: nic-0
+                #@ end
               networkInterfaceMultiqueue: true
               rng: {}
             machine:
@@ -89,8 +95,14 @@ objects:
           evictionStrategy: LiveMigrate
           hostname: ${NAME}
           networks:
-          - name: nic-0
-            pod: {}
+            #@ if data.values.network_mode == "bridge":
+            - multus:
+                networkName: #@ data.values.network_name
+              name: nic-0
+            #@ else:
+            - name: nic-0
+              pod: {}
+            #@ end
           terminationGracePeriodSeconds: 0
           volumes:
             - dataVolume:
@@ -103,9 +115,12 @@ objects:
                   name: default
                   ssh_authorized_keys:
                     - |
-                      (@= data.values.ssh_key @)
+                      ${SSH_KEY}
               name: cloudinitdisk
 parameters:
   - description: Name for the new VM
     name: NAME
+    required: true
+  - description: SSH public key for access to VM
+    name: SSH_KEY
     required: true
