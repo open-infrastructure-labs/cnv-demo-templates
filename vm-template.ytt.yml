@@ -49,7 +49,7 @@ objects:
               resources:
                 requests:
                   storage: #@ data.values.disk_size
-              storageClassName: hostpath-provisioner
+              storageClassName: #@ data.values.storage_class
               volumeMode: Filesystem
             source:
               http:
