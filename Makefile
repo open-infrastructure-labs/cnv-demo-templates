@@ -13,6 +13,7 @@ BUILD_COMMAND = \
 		-f $(SRC_TEMPLATE) -f values.yml -f $< \
 		-v network_mode=$$NM \
 		-v network_name=$(NETWORK_NAME) \
+		$(YTT_ARGS) \
 		> $@ || { rm -f $@; exit 1; }
 
 %-template-pod.yml: values-%.yml $(SRC_TEMPLATE)
