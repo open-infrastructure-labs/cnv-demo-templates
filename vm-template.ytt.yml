@@ -45,12 +45,12 @@ objects:
           spec:
             pvc:
               accessModes:
-                - ReadWriteOnce
+                - #@ data.values.disk_access_mode
               resources:
                 requests:
                   storage: #@ data.values.disk_size
               storageClassName: #@ data.values.storage_class
-              volumeMode: Filesystem
+              volumeMode: #@ data.values.disk_volume_mode
             source:
               http:
                 url: #@ data.values.image_url

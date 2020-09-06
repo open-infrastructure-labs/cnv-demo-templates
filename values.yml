@@ -1,6 +1,8 @@
 #@data/values
 ---
 disk_size: 10Gi
+disk_access_mode: ReadWriteMany
+disk_volume_mode: Block
 flavor: medium
 machine_type: pc-q35-rhel8.2.0
 os_short_name: rhel8.2
